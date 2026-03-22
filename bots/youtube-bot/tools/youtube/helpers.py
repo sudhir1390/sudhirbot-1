@@ -1,9 +1,23 @@
 import re
 import json
 import glob
+import os
 import subprocess
+import tempfile
 
 MAX_VIDEO_MINUTES = 120
+
+
+def _write_cookies_file() -> str | None:
+    """Write cookies from environment variable to a temp file."""
+    cookies = os.environ.get("YOUTUBE_COOKIES")
+    if not cookies:
+        return None
+    tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".txt",
+                                      delete=False, encoding="utf-8")
+    tmp.write(cookies)
+    tmp.close()
+    return tmp.name
 
 
 def extract_video_id(url: str) -> str | None:
@@ -12,12 +26,15 @@ def extract_video_id(url: str) -> str | None:
 
 
 def fetch_video_info(video_id: str) -> dict:
+    cookies_file = _write_cookies_file()
     try:
+        cmd = ["yt-dlp", "--dump-json", "--no-download",
+               "--js-runtimes", "node",
+               f"https://www.youtube.com/watch?v={video_id}"]
+        if cookies_file:
+            cmd += ["--cookies", cookies_file]
         result = subprocess.run(
-            ["yt-dlp", "--dump-json", "--no-download",
-             "--js-runtimes", "node",
-             f"https://www.youtube.com/watch?v={video_id}"],
-            capture_output=True, text=True, timeout=30
+            cmd, capture_output=True, text=True, timeout=30
         )
         info = json.loads(result.stdout)
         return {
@@ -31,21 +48,27 @@ def fetch_video_info(video_id: str) -> dict:
     except Exception as e:
         print("fetch_video_info error:", e)
         return {"duration_seconds": 0, "title": "Unknown", "chapters": []}
+    finally:
+        if cookies_file and os.path.exists(cookies_file):
+            os.unlink(cookies_file)
 
 
 def get_transcript(video_id: str) -> list[dict] | None:
+    cookies_file = _write_cookies_file()
     try:
+        cmd = ["yt-dlp",
+               "--write-auto-sub",
+               "--write-sub",
+               "--sub-lang", "en,hi,en-IN",
+               "--skip-download",
+               "--sub-format", "json3",
+               "--js-runtimes", "node",
+               "-o", f"/tmp/%(id)s.%(ext)s",
+               f"https://www.youtube.com/watch?v={video_id}"]
+        if cookies_file:
+            cmd += ["--cookies", cookies_file]
         result = subprocess.run(
-            ["yt-dlp",
-             "--write-auto-sub",
-             "--write-sub",
-             "--sub-lang", "en,hi,en-IN",
-             "--skip-download",
-             "--sub-format", "json3",
-             "--js-runtimes", "node",
-             "-o", f"/tmp/%(id)s.%(ext)s",
-             f"https://www.youtube.com/watch?v={video_id}"],
-            capture_output=True, text=True, timeout=60
+            cmd, capture_output=True, text=True, timeout=60
         )
         print("yt-dlp stdout:", result.stdout[:500])
         print("yt-dlp stderr:", result.stderr[:500])
@@ -77,6 +100,9 @@ def get_transcript(video_id: str) -> list[dict] | None:
     except Exception as e:
         print("transcript error:", e)
         return None
+    finally:
+        if cookies_file and os.path.exists(cookies_file):
+            os.unlink(cookies_file)
 
 
 def segment_transcript(transcript: list[dict], chapters: list[dict]) -> list[dict]:
