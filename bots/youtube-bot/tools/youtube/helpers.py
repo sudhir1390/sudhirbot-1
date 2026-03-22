@@ -1,9 +1,7 @@
 import re
 import json
-import glob
 import os
 import subprocess
-import tempfile
 
 MAX_VIDEO_MINUTES = 120
 
@@ -38,21 +36,24 @@ def fetch_video_info(video_id: str) -> dict:
 def get_transcript(video_id: str) -> list[dict] | None:
     try:
         from youtube_transcript_api import YouTubeTranscriptApi
-        from youtube_transcript_api.proxies import WebshareProxyConfig
 
         username = os.environ.get("WEBSHARE_USERNAME")
         password = os.environ.get("WEBSHARE_PASSWORD")
 
         if username and password:
-            proxy_config = WebshareProxyConfig(
-                proxy_username=username,
-                proxy_password=password,
+            proxy_url = f"http://{username}:{password}@p.webshare.io:80"
+            proxies   = {"http": proxy_url, "https": proxy_url}
+            transcript = YouTubeTranscriptApi.get_transcript(
+                video_id,
+                languages=["en", "hi", "en-IN"],
+                proxies=proxies
             )
-            api = YouTubeTranscriptApi(proxies=proxy_config)
         else:
-            api = YouTubeTranscriptApi()
+            transcript = YouTubeTranscriptApi.get_transcript(
+                video_id,
+                languages=["en", "hi", "en-IN"]
+            )
 
-        transcript = api.get_transcript(video_id, languages=["en", "hi", "en-IN"])
         print(f"transcript fetched: {len(transcript)} segments")
         return transcript
 
