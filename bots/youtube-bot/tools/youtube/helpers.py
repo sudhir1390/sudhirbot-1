@@ -15,8 +15,9 @@ def fetch_video_info(video_id: str) -> dict:
     try:
         result = subprocess.run(
             ["yt-dlp", "--dump-json", "--no-download",
+             "--js-runtimes", "nodejs",
              f"https://www.youtube.com/watch?v={video_id}"],
-            capture_output=True, text=True, timeout=20
+            capture_output=True, text=True, timeout=30
         )
         info = json.loads(result.stdout)
         return {
@@ -41,6 +42,7 @@ def get_transcript(video_id: str) -> list[dict] | None:
              "--sub-lang", "en,hi,en-IN",
              "--skip-download",
              "--sub-format", "json3",
+             "--js-runtimes", "nodejs",
              "-o", f"/tmp/%(id)s.%(ext)s",
              f"https://www.youtube.com/watch?v={video_id}"],
             capture_output=True, text=True, timeout=60
