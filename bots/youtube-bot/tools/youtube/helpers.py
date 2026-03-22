@@ -15,13 +15,16 @@ def fetch_video_info(video_id: str) -> dict:
     try:
         username = os.environ.get("WEBSHARE_USERNAME")
         password = os.environ.get("WEBSHARE_PASSWORD")
+        host     = os.environ.get("WEBSHARE_HOST")
+        port     = os.environ.get("WEBSHARE_PORT")
 
         cmd = ["yt-dlp", "--dump-json", "--no-download",
                "--js-runtimes", "node"]
 
-        if username and password:
-            proxy_url = f"http://{username}:{password}@p.webshare.io:80"
+        if username and password and host and port:
+            proxy_url = f"http://{username}:{password}@{host}:{port}"
             cmd += ["--proxy", proxy_url]
+            print(f"using proxy: {host}:{port}")
 
         cmd.append(f"https://www.youtube.com/watch?v={video_id}")
 
@@ -47,18 +50,22 @@ def fetch_video_info(video_id: str) -> dict:
 def get_transcript(video_id: str) -> list[dict] | None:
     try:
         from youtube_transcript_api import YouTubeTranscriptApi
-        from youtube_transcript_api.proxies import WebshareProxyConfig
+        from youtube_transcript_api.proxies import GenericProxyConfig
 
         username = os.environ.get("WEBSHARE_USERNAME")
         password = os.environ.get("WEBSHARE_PASSWORD")
+        host     = os.environ.get("WEBSHARE_HOST")
+        port     = os.environ.get("WEBSHARE_PORT")
 
-        if username and password:
+        if username and password and host and port:
+            proxy_url = f"http://{username}:{password}@{host}:{port}"
             ytt_api = YouTubeTranscriptApi(
-                proxy_config=WebshareProxyConfig(
-                    proxy_username=username,
-                    proxy_password=password,
+                proxy_config=GenericProxyConfig(
+                    http_url=proxy_url,
+                    https_url=proxy_url,
                 )
             )
+            print(f"using proxy: {host}:{port}")
         else:
             ytt_api = YouTubeTranscriptApi()
 
