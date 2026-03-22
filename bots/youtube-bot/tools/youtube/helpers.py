@@ -63,6 +63,7 @@ def get_transcript(video_id: str) -> list[dict] | None:
                "--skip-download",
                "--sub-format", "json3",
                "--js-runtimes", "node",
+               "--remote-components", "ejs:github",
                "-o", f"/tmp/%(id)s.%(ext)s",
                f"https://www.youtube.com/watch?v={video_id}"]
         if cookies_file:
