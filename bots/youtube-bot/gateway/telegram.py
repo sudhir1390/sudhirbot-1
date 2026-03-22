@@ -24,7 +24,7 @@ class TelegramGateway:
             return {"ok": True}
 
         @self.app.get("/health")
-	@self.app.head("/health")
+        @self.app.head("/health")
         async def health():
             return {"status": "ok"}
 
