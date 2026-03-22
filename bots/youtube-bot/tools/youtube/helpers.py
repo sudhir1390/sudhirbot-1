@@ -8,31 +8,16 @@ import tempfile
 MAX_VIDEO_MINUTES = 120
 
 
-def _write_cookies_file() -> str | None:
-    """Write cookies from environment variable to a temp file."""
-    cookies = os.environ.get("YOUTUBE_COOKIES")
-    if not cookies:
-        return None
-    tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".txt",
-                                      delete=False, encoding="utf-8")
-    tmp.write(cookies)
-    tmp.close()
-    return tmp.name
-
-
 def extract_video_id(url: str) -> str | None:
     match = re.search(r"(?:v=|youtu\.be/)([a-zA-Z0-9_-]{11})", url)
     return match.group(1) if match else None
 
 
 def fetch_video_info(video_id: str) -> dict:
-    cookies_file = _write_cookies_file()
     try:
         cmd = ["yt-dlp", "--dump-json", "--no-download",
                "--js-runtimes", "node",
                f"https://www.youtube.com/watch?v={video_id}"]
-        if cookies_file:
-            cmd += ["--cookies", cookies_file]
         result = subprocess.run(
             cmd, capture_output=True, text=True, timeout=30
         )
@@ -48,62 +33,32 @@ def fetch_video_info(video_id: str) -> dict:
     except Exception as e:
         print("fetch_video_info error:", e)
         return {"duration_seconds": 0, "title": "Unknown", "chapters": []}
-    finally:
-        if cookies_file and os.path.exists(cookies_file):
-            os.unlink(cookies_file)
 
 
 def get_transcript(video_id: str) -> list[dict] | None:
-    cookies_file = _write_cookies_file()
     try:
-        cmd = ["yt-dlp",
-               "--write-auto-sub",
-               "--write-sub",
-               "--sub-lang", "en,hi,en-IN",
-               "--skip-download",
-               "--sub-format", "json3",
-               "--js-runtimes", "node",
-               "--remote-components", "ejs:github",
-               "-o", f"/tmp/%(id)s.%(ext)s",
-               f"https://www.youtube.com/watch?v={video_id}"]
-        if cookies_file:
-            cmd += ["--cookies", cookies_file]
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=60
-        )
-        print("yt-dlp stdout:", result.stdout[:500])
-        print("yt-dlp stderr:", result.stderr[:500])
+        from youtube_transcript_api import YouTubeTranscriptApi
+        from youtube_transcript_api.proxies import WebshareProxyConfig
 
-        files = glob.glob(f"/tmp/{video_id}*.json3")
-        print("transcript files found:", files)
+        username = os.environ.get("WEBSHARE_USERNAME")
+        password = os.environ.get("WEBSHARE_PASSWORD")
 
-        if not files:
-            return None
+        if username and password:
+            proxy_config = WebshareProxyConfig(
+                proxy_username=username,
+                proxy_password=password,
+            )
+            api = YouTubeTranscriptApi(proxies=proxy_config)
+        else:
+            api = YouTubeTranscriptApi()
 
-        with open(files[0], "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        segments = []
-        for event in data.get("events", []):
-            if "segs" not in event:
-                continue
-            text = "".join(s.get("utf8", "") for s in event["segs"]).strip()
-            if text:
-                segments.append({
-                    "text":     text,
-                    "start":    event.get("tStartMs", 0) / 1000,
-                    "duration": event.get("dDurationMs", 0) / 1000,
-                })
-
-        print("segments found:", len(segments))
-        return segments if segments else None
+        transcript = api.get_transcript(video_id, languages=["en", "hi", "en-IN"])
+        print(f"transcript fetched: {len(transcript)} segments")
+        return transcript
 
     except Exception as e:
         print("transcript error:", e)
         return None
-    finally:
-        if cookies_file and os.path.exists(cookies_file):
-            os.unlink(cookies_file)
 
 
 def segment_transcript(transcript: list[dict], chapters: list[dict]) -> list[dict]:
