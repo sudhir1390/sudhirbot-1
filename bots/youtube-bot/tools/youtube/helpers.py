@@ -13,12 +13,23 @@ def extract_video_id(url: str) -> str | None:
 
 def fetch_video_info(video_id: str) -> dict:
     try:
+        username = os.environ.get("WEBSHARE_USERNAME")
+        password = os.environ.get("WEBSHARE_PASSWORD")
+
         cmd = ["yt-dlp", "--dump-json", "--no-download",
-               "--js-runtimes", "node",
-               f"https://www.youtube.com/watch?v={video_id}"]
+               "--js-runtimes", "node"]
+
+        if username and password:
+            proxy_url = f"http://{username}:{password}@p.webshare.io:80"
+            cmd += ["--proxy", proxy_url]
+
+        cmd.append(f"https://www.youtube.com/watch?v={video_id}")
+
         result = subprocess.run(
             cmd, capture_output=True, text=True, timeout=30
         )
+        print("fetch stdout:", result.stdout[:300])
+        print("fetch stderr:", result.stderr[:300])
         info = json.loads(result.stdout)
         return {
             "duration_seconds": int(info.get("duration") or 0),
@@ -36,24 +47,26 @@ def fetch_video_info(video_id: str) -> dict:
 def get_transcript(video_id: str) -> list[dict] | None:
     try:
         from youtube_transcript_api import YouTubeTranscriptApi
+        from youtube_transcript_api.proxies import WebshareProxyConfig
 
         username = os.environ.get("WEBSHARE_USERNAME")
         password = os.environ.get("WEBSHARE_PASSWORD")
 
         if username and password:
-            proxy_url = f"http://{username}:{password}@p.webshare.io:80"
-            proxies   = {"http": proxy_url, "https": proxy_url}
-            transcript = YouTubeTranscriptApi.get_transcript(
-                video_id,
-                languages=["en", "hi", "en-IN"],
-                proxies=proxies
+            ytt_api = YouTubeTranscriptApi(
+                proxy_config=WebshareProxyConfig(
+                    proxy_username=username,
+                    proxy_password=password,
+                )
             )
         else:
-            transcript = YouTubeTranscriptApi.get_transcript(
-                video_id,
-                languages=["en", "hi", "en-IN"]
-            )
+            ytt_api = YouTubeTranscriptApi()
 
+        transcript_list = ytt_api.fetch(video_id)
+        transcript = [
+            {"text": t.text, "start": t.start, "duration": t.duration}
+            for t in transcript_list
+        ]
         print(f"transcript fetched: {len(transcript)} segments")
         return transcript
 
