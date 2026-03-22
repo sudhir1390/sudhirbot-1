@@ -38,7 +38,7 @@ def get_transcript(video_id: str) -> list[dict] | None:
             ["yt-dlp",
              "--write-auto-sub",
              "--write-sub",
-             "--sub-lang", "en",
+             "--sub-lang", "en,hi,en-IN",
              "--skip-download",
              "--sub-format", "json3",
              "-o", f"/tmp/%(id)s.%(ext)s",
