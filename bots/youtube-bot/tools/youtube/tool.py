@@ -149,4 +149,3 @@ class YouTubeTool(BaseTool):
             state["quiz"] = None
             return f"{feedback}\n\n{result}"
         return f"{feedback}\n\n{fmt_question(quiz)}"
-```
