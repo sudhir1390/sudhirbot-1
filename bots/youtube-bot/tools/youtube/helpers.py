@@ -1,5 +1,4 @@
 import re
-import json
 import os
 
 MAX_VIDEO_MINUTES = 120
@@ -10,15 +9,47 @@ def extract_video_id(url: str) -> str | None:
     return match.group(1) if match else None
 
 
+def _parse_chapters_from_description(description: str) -> list[dict]:
+    """
+    Parse chapter timestamps from a YouTube video description.
+    Supports formats: 0:00, 00:00, 0:00:00, 00:00:00
+    Returns list of {"title", "start_time"} dicts sorted by start_time.
+    """
+    pattern = re.compile(
+        r"(?:^|\n)\s*(?:(\d+):)?(\d{1,2}):(\d{2})\s+(.+)", re.MULTILINE
+    )
+    chapters = []
+    for m in pattern.finditer(description):
+        hours   = int(m.group(1)) if m.group(1) else 0
+        minutes = int(m.group(2))
+        seconds = int(m.group(3))
+        title   = m.group(4).strip()
+        start   = hours * 3600 + minutes * 60 + seconds
+        chapters.append({"title": title, "start_time": start})
+    # Must have at least 2 timestamps to be considered real chapters
+    return sorted(chapters, key=lambda c: c["start_time"]) if len(chapters) >= 2 else []
+
+
 def fetch_video_info(video_id: str) -> dict:
     try:
         from supadata import Supadata
-        client = Supadata(api_key=os.environ["SUPADATA_API_KEY"])
-        video  = client.youtube.video(id=video_id)
+        client      = Supadata(api_key=os.environ["SUPADATA_API_KEY"])
+        video       = client.metadata(url=f"https://www.youtube.com/watch?v={video_id}")
+        description = getattr(video, "description", "") or ""
+        # duration lives under video.media for the unified metadata endpoint
+        duration = 0
+        media = getattr(video, "media", None)
+        if media:
+            if isinstance(media, dict):
+                duration = int(media.get("duration", 0) or 0)
+            else:
+                duration = int(getattr(media, "duration", 0) or 0)
+        chapters = _parse_chapters_from_description(description)
+        print(f"fetch_video_info: duration={duration}s, chapters={len(chapters)}")
         return {
-            "duration_seconds": int(video.duration or 0),
-            "title":            video.title or "Unknown",
-            "chapters":         [],
+            "duration_seconds": duration,
+            "title":            getattr(video, "title", None) or "Unknown",
+            "chapters":         chapters,
         }
     except Exception as e:
         print("fetch_video_info error:", e)
