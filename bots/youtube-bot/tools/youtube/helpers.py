@@ -49,36 +49,24 @@ def fetch_video_info(video_id: str) -> dict:
 
 def get_transcript(video_id: str) -> list[dict] | None:
     try:
-        from youtube_transcript_api import YouTubeTranscriptApi
-        from youtube_transcript_api.proxies import GenericProxyConfig
-
-        username = os.environ.get("WEBSHARE_USERNAME")
-        password = os.environ.get("WEBSHARE_PASSWORD")
-        host     = os.environ.get("WEBSHARE_HOST")
-        port     = os.environ.get("WEBSHARE_PORT")
-
-        if username and password and host and port:
-            proxy_url = f"http://{username}:{password}@{host}:{port}"
-            ytt_api = YouTubeTranscriptApi(
-                proxy_config=GenericProxyConfig(
-                    http_url=proxy_url,
-                    https_url=proxy_url,
-                )
-            )
-            print(f"using proxy: {host}:{port}")
-        else:
-            ytt_api = YouTubeTranscriptApi()
-
-        transcript_list = ytt_api.fetch(video_id)
+        from supadata import Supadata, SupadataError
+        client = Supadata(api_key=os.environ["SUPADATA_API_KEY"])
+        result = client.youtube.transcript(video_id=video_id)
+        if not result.content:
+            print("Supadata returned empty transcript")
+            return None
         transcript = [
-            {"text": t.text, "start": t.start, "duration": t.duration}
-            for t in transcript_list
+            {
+                "text":     seg.text,
+                "start":    seg.offset / 1000.0,
+                "duration": seg.duration / 1000.0,
+            }
+            for seg in result.content
         ]
-        print(f"transcript fetched: {len(transcript)} segments")
+        print(f"Supadata transcript fetched: {len(transcript)} segments")
         return transcript
-
     except Exception as e:
-        print("transcript error:", e)
+        print("Supadata transcript error:", e)
         return None
 
 
