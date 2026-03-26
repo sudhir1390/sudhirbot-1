@@ -1,7 +1,6 @@
 import re
 import json
 import os
-import subprocess
 
 MAX_VIDEO_MINUTES = 120
 
@@ -13,34 +12,13 @@ def extract_video_id(url: str) -> str | None:
 
 def fetch_video_info(video_id: str) -> dict:
     try:
-        username = os.environ.get("WEBSHARE_USERNAME")
-        password = os.environ.get("WEBSHARE_PASSWORD")
-        host     = os.environ.get("WEBSHARE_HOST")
-        port     = os.environ.get("WEBSHARE_PORT")
-
-        cmd = ["yt-dlp", "--dump-json", "--no-download",
-               "--js-runtimes", "node"]
-
-        if username and password and host and port:
-            proxy_url = f"http://{username}:{password}@{host}:{port}"
-            cmd += ["--proxy", proxy_url]
-            print(f"using proxy: {host}:{port}")
-
-        cmd.append(f"https://www.youtube.com/watch?v={video_id}")
-
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=30
-        )
-        print("fetch stdout:", result.stdout[:300])
-        print("fetch stderr:", result.stderr[:300])
-        info = json.loads(result.stdout)
+        from supadata import Supadata
+        client = Supadata(api_key=os.environ["SUPADATA_API_KEY"])
+        video  = client.youtube.video(id=video_id)
         return {
-            "duration_seconds": int(info.get("duration") or 0),
-            "title":            info.get("title", "Unknown"),
-            "chapters":         [
-                {"title": ch["title"], "start_time": int(ch["start_time"])}
-                for ch in (info.get("chapters") or [])
-            ]
+            "duration_seconds": int(video.duration or 0),
+            "title":            video.title or "Unknown",
+            "chapters":         [],
         }
     except Exception as e:
         print("fetch_video_info error:", e)
@@ -49,7 +27,7 @@ def fetch_video_info(video_id: str) -> dict:
 
 def get_transcript(video_id: str) -> list[dict] | None:
     try:
-        from supadata import Supadata, SupadataError
+        from supadata import Supadata
         client = Supadata(api_key=os.environ["SUPADATA_API_KEY"])
         result = client.youtube.transcript(video_id=video_id)
         if not result.content:
