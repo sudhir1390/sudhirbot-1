@@ -5,3 +5,6 @@ anthropic
 supadata
 yt-dlp
 PyMuPDF
+yfinance
+mplfinance
+pandas_ta

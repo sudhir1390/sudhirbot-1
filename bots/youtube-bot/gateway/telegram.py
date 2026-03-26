@@ -52,15 +52,24 @@ class TelegramGateway:
             return
 
         reply = await self.router.route(text, user_id)
-        await self._send(chat_id, reply)
+
+        # ── Route reply type ────────────────────────────────────
+        if isinstance(reply, dict) and reply.get("type") == "photo":
+            await self._send_photo(
+                chat_id,
+                reply["image"],
+                reply.get("caption", "")
+            )
+            if reply.get("analysis"):
+                await self._send(chat_id, reply["analysis"])
+        else:
+            await self._send(chat_id, reply)
 
     async def _handle_pdf(self, doc: dict, user_id: str, chat_id: int):
-        # File size check
         if doc.get("file_size", 0) > MAX_PDF_BYTES:
             await self._send(chat_id, "❌ PDF too large. Please send a file under 20MB.")
             return
 
-        # Auto-create session if needed and switch to /pdf
         session = session_store.get(user_id)
         if not session:
             session = session_store.create(user_id)
@@ -112,6 +121,20 @@ class TelegramGateway:
                     "chat_id":    chat_id,
                     "text":       text[:4096],
                     "parse_mode": "Markdown",
+                }
+            )
+
+    async def _send_photo(self, chat_id: int, image_bytes: bytes, caption: str = ""):
+        async with httpx.AsyncClient(timeout=60) as http:
+            await http.post(
+                f"{TELEGRAM_API}/sendPhoto",
+                data={
+                    "chat_id":    chat_id,
+                    "caption":    caption[:1024],
+                    "parse_mode": "Markdown",
+                },
+                files={
+                    "photo": ("chart.png", image_bytes, "image/png")
                 }
             )
 
