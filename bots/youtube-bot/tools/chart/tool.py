@@ -53,30 +53,31 @@ class ChartTool(BaseTool):
         if not symbol:
             return "❌ Couldn't identify a symbol. Try: `Reliance daily 1 year`"
 
-        # Resolve to yfinance ticker
         ticker, symbol, exchange = resolve(symbol, exchange, raw_name)
 
-        # Fetch OHLCV data
         df, metadata = fetch_ohlcv(ticker, interval, period)
         if df is None:
             return f"❌ {metadata.get('error', 'Could not fetch data')} for *{symbol}*"
 
-        # Generate chart image
         try:
-            image_bytes = generate_chart(df, symbol, exchange, interval, metadata)
+            # generate_chart now returns (image_bytes, indicator_text)
+            image_bytes, indicator_text = generate_chart(
+                df, symbol, exchange, interval, metadata
+            )
         except Exception as e:
             print(f"Chart engine error: {e}")
             return f"❌ Could not generate chart: {e}"
 
-        # Store state for follow-ups
+        # Store state — indicator_text available for all follow-ups
         state.update({
-            "last_symbol":   symbol,
-            "last_exchange": exchange,
-            "last_interval": interval,
-            "last_period":   period,
-            "metadata":      metadata,
-            "last_analysis": None,
-            "chat_history":  [],
+            "last_symbol":    symbol,
+            "last_exchange":  exchange,
+            "last_interval":  interval,
+            "last_period":    period,
+            "metadata":       metadata,
+            "indicator_text": indicator_text,   # ← fix 7
+            "last_analysis":  None,
+            "chat_history":   [],
         })
 
         caption = (
@@ -87,7 +88,6 @@ class ChartTool(BaseTool):
             f"L: {metadata['period_low']}"
         )
 
-        # Chart only
         if not with_analysis:
             return {
                 "type":     "photo",
@@ -96,7 +96,6 @@ class ChartTool(BaseTool):
                 "analysis": None,
             }
 
-        # Chart + analysis
         analysis             = analyse_chart(
             image_bytes, symbol, exchange, interval, metadata, session
         )

@@ -1,26 +1,27 @@
-import anthropic
-import os
+from shared.claude import client, MODEL_FOLLOWUP          # fix 5: shared client
 from tools.chart.prompts.analysis_prompt import FOLLOWUP_SYSTEM, FOLLOWUP_USER
-from shared.claude import MODEL_FOLLOWUP
-
-client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_KEY"])
 
 
 def answer_followup(question: str, state: dict, session: dict) -> str:
     """
-    Answer a follow-up question using stored chart context + analysis.
+    Answer a follow-up question using stored chart context + indicator snapshot.
     """
     try:
-        # Build analysis section
+        # fix 7: use indicator_text if available, fall back to metadata-only note
+        indicator_text = state.get("indicator_text", "")
+        if indicator_text:
+            indicators_section = f"Indicator snapshot:\n{indicator_text}"
+        else:
+            indicators_section = "(No indicator data available — answering from metadata only)"
+
+        # Previous Claude Vision analysis if present (from "with analysis" flow)
         analysis = state.get("last_analysis")
         if analysis:
-            analysis_section = f"Previous analysis:\n{analysis}"
+            analysis_section = f"Previous full analysis:\n{analysis}"
         else:
-            analysis_section = (
-                "(No full analysis available — answering from chart metadata only)"
-            )
+            analysis_section = "(No full analysis — use indicator snapshot above)"
 
-        # Build history string (last 3 exchanges)
+        # Build history string (last 3 exchanges = 6 messages)
         history      = state.get("chat_history", [])
         history_text = ""
         for msg in history[-6:]:
@@ -38,7 +39,7 @@ def answer_followup(question: str, state: dict, session: dict) -> str:
             last_price=metadata.get("last_price", ""),
             period_high=metadata.get("period_high", ""),
             period_low=metadata.get("period_low", ""),
-            analysis_section=analysis_section,
+            analysis_section=f"{indicators_section}\n\n{analysis_section}",
             history=history_text if history_text else "None",
             question=question,
         )

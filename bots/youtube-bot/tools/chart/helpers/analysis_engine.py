@@ -1,10 +1,6 @@
 import base64
-import anthropic
-import os
+from shared.claude import client, MODEL_VISION             # fix 5: shared client
 from tools.chart.prompts.analysis_prompt import ANALYSIS_SYSTEM, ANALYSIS_USER
-from shared.claude import MODEL_VISION
-
-client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_KEY"])
 
 
 def analyse_chart(image_bytes: bytes, symbol: str, exchange: str,

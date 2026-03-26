@@ -13,7 +13,8 @@ def fetch_ohlcv(ticker: str, interval: str, period: str) -> tuple:
             period=period,
             interval=interval,
             auto_adjust=True,
-            progress=False
+            progress=False,
+            timeout=15          # ← fix 6: prevent indefinite hangs
         )
 
         if df.empty:
