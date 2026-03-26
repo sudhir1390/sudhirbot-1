@@ -7,4 +7,4 @@ yt-dlp
 PyMuPDF
 yfinance
 mplfinance
-pandas_ta
+ta

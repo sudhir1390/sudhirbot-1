@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.patches import Rectangle
 import pandas as pd
-import pandas_ta as ta
+import ta as ta_lib
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -18,10 +18,10 @@ TEXT       = "#b2b5be"
 UP         = "#26a69a"
 DOWN       = "#ef5350"
 EMA_COLORS = {
-    20:  "#26c6da",   # cyan
-    50:  "#ff9800",   # orange
-    100: "#ef5350",   # red
-    200: "#7b1fa2",   # purple
+    20:  "#26c6da",
+    50:  "#ff9800",
+    100: "#ef5350",
+    200: "#7b1fa2",
 }
 RSI_COLOR    = "#7c4dff"
 RSI_MA_COLOR = "#ffd600"
@@ -34,10 +34,11 @@ def generate_chart(df: pd.DataFrame, symbol: str, exchange: str,
     Volume, and RSI panels. Returns PNG as bytes.
     """
     # -- Calculate indicators --
-    for period in [20, 50, 100, 200]:
-        df[f"EMA{period}"] = ta.ema(df["Close"], length=period)
-
-    df["RSI"]    = ta.rsi(df["Close"], length=14)
+    df["EMA20"]  = ta_lib.trend.ema_indicator(df["Close"], window=20)
+    df["EMA50"]  = ta_lib.trend.ema_indicator(df["Close"], window=50)
+    df["EMA100"] = ta_lib.trend.ema_indicator(df["Close"], window=100)
+    df["EMA200"] = ta_lib.trend.ema_indicator(df["Close"], window=200)
+    df["RSI"]    = ta_lib.momentum.rsi(df["Close"], window=14)
     df["RSI_MA"] = df["RSI"].rolling(14).mean()
 
     # -- Figure setup --
