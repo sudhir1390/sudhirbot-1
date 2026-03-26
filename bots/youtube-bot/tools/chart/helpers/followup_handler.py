@@ -1,7 +1,7 @@
 import anthropic
 import os
 from tools.chart.prompts.analysis_prompt import FOLLOWUP_SYSTEM, FOLLOWUP_USER
-from shared.claude import MODEL_TEXT
+from shared.claude import MODEL_FOLLOWUP
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_KEY"])
 
@@ -44,7 +44,7 @@ def answer_followup(question: str, state: dict, session: dict) -> str:
         )
 
         response = client.messages.create(
-            model=MODEL_TEXT,
+            model=MODEL_FOLLOWUP,
             max_tokens=800,
             system=FOLLOWUP_SYSTEM,
             messages=[{"role": "user", "content": prompt}]

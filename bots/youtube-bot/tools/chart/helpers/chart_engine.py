@@ -18,10 +18,10 @@ TEXT       = "#b2b5be"
 UP         = "#26a69a"
 DOWN       = "#ef5350"
 EMA_COLORS = {
-    20:  "#26c6da",
-    50:  "#ff9800",
-    100: "#ef5350",
-    200: "#7b1fa2",
+    20:  "#26c6da",   # cyan
+    50:  "#ff9800",   # orange
+    100: "#ef5350",   # red
+    200: "#7b1fa2",   # purple
 }
 RSI_COLOR    = "#7c4dff"
 RSI_MA_COLOR = "#ffd600"
@@ -74,13 +74,18 @@ def generate_chart(df: pd.DataFrame, symbol: str, exchange: str,
         ax_price.plot([i, i], [row["Low"], row["High"]],
                       color=color, linewidth=0.7, zorder=2)
 
-    # -- EMAs --
+    # -- EMAs with current value in legend label --
     for period, color in EMA_COLORS.items():
         col = f"EMA{period}"
         if col in df.columns:
+            last_val = df[col].iloc[-1]
+            if pd.notna(last_val):
+                label = f"EMA {period}  {last_val:,.2f}"
+            else:
+                label = f"EMA {period}"
             ax_price.plot(x, df[col].values,
                           color=color, linewidth=1.2,
-                          label=f"EMA {period}", zorder=4)
+                          label=label, zorder=4)
 
     ax_price.legend(
         loc="upper left", fontsize=7.5,

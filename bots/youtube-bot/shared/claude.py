@@ -7,9 +7,10 @@ CACHE_TTL_SECONDS = 600
 MAX_HISTORY       = 10
 
 # ── Model configuration ───────────────────────────────────────────
-# Update these two lines when Anthropic releases new models
-MODEL_TEXT   = "claude-haiku-4-5-20251001"  # used for text tasks
-MODEL_VISION = "claude-haiku-4-5-20251001"  # used for chart vision analysis
+# Update these when Anthropic releases new models
+MODEL_TEXT     = "claude-haiku-4-5-20251001"   # NLP parsing — fast, cheap
+MODEL_VISION   = "claude-sonnet-4-5-20250929"  # Chart analysis — best quality
+MODEL_FOLLOWUP = "claude-sonnet-4-5-20250929"  # Follow-up Q&A — best quality
 # ─────────────────────────────────────────────────────────────────
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
