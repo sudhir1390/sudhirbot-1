@@ -2,6 +2,7 @@ import base64
 import anthropic
 import os
 from tools.chart.prompts.analysis_prompt import ANALYSIS_SYSTEM, ANALYSIS_USER
+from shared.claude import MODEL_VISION
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_KEY"])
 
@@ -27,7 +28,7 @@ def analyse_chart(image_bytes: bytes, symbol: str, exchange: str,
         )
 
         response = client.messages.create(
-            model="claude-haiku-latest",
+            model=MODEL_VISION,
             max_tokens=2000,
             system=ANALYSIS_SYSTEM,
             messages=[{

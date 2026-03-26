@@ -6,6 +6,12 @@ ANTHROPIC_KEY     = os.environ["ANTHROPIC_KEY"]
 CACHE_TTL_SECONDS = 600
 MAX_HISTORY       = 10
 
+# ── Model configuration ───────────────────────────────────────────
+# Update these two lines when Anthropic releases new models
+MODEL_TEXT   = "claude-haiku-4-5-20251001"  # used for text tasks
+MODEL_VISION = "claude-haiku-4-5-20251001"  # used for chart vision analysis
+# ─────────────────────────────────────────────────────────────────
+
 client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
 
 def build_system(transcript: str, context_label: str = "") -> list[dict]:
@@ -23,7 +29,7 @@ def build_system(transcript: str, context_label: str = "") -> list[dict]:
     ]
 
 def ask(transcript, history, question, session, context_label="",
-        model="claude-haiku-4-5", max_tokens=1024):
+        model=MODEL_TEXT, max_tokens=1024):
     import time
     messages = history[-MAX_HISTORY:] + [{"role": "user", "content": question}]
     system   = build_system(transcript, context_label)
@@ -47,7 +53,7 @@ def ask(transcript, history, question, session, context_label="",
             return response.content[0].text + "\n\n_(Note: content was trimmed due to length)_"
         raise
 
-def ask_json(content, prompt, session, model="claude-haiku-4-5", max_tokens=1200):
+def ask_json(content, prompt, session, model=MODEL_TEXT, max_tokens=1200):
     import re, time
     system = [
         {

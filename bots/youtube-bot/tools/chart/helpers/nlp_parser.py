@@ -2,6 +2,7 @@ import json
 import anthropic
 import os
 from tools.chart.prompts.nlp_prompt import NLP_SYSTEM, NLP_USER
+from shared.claude import MODEL_TEXT
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_KEY"])
 
@@ -12,7 +13,7 @@ def parse_intent(message: str) -> dict:
     """
     try:
         response = client.messages.create(
-            model="claude-haiku-latest",
+            model=MODEL_TEXT,
             max_tokens=300,
             system=NLP_SYSTEM,
             messages=[{
